@@ -1,0 +1,57 @@
+From 05bed7c58ed48bc1280d37e3a8ef68b6e0847e9b Mon Sep 17 00:00:00 2001
+From: Robert Craigie <robertcraigie30@gmail.com>
+Date: Wed, 1 Sep 2021 14:48:22 +0100
+Subject: [PATCH] Delegate binary downloading to prisma
+
+---
+ src/prisma/binaries/binaries.py | 10 +++-------
+ src/prisma/cli/prisma.py        |  5 +----
+ 2 files changed, 4 insertions(+), 11 deletions(-)
+
+diff --git a/src/prisma/binaries/binaries.py b/src/prisma/binaries/binaries.py
+index 565c70b..701f19e 100644
+--- a/src/prisma/binaries/binaries.py
++++ b/src/prisma/binaries/binaries.py
+@@ -35,13 +35,9 @@ BINARIES: List[Binary] = [
+ 
+ def ensure_cached() -> Path:
+     binaries: List[Binary] = []
+-    for binary in BINARIES:
+-        path = binary.path
+-        if path.exists():
+-            log.debug('%s cached at %s', binary.name, path)
+-        else:
+-            log.debug('%s not cached at %s', binary.name, path)
+-            binaries.append(binary)
++    cli_binary = BINARIES[-1]
++    if not cli_binary.path.exists():
++        binaries.append(cli_binary)
+ 
+     if not binaries:
+         log.debug('All binaries are cached')
+diff --git a/src/prisma/cli/prisma.py b/src/prisma/cli/prisma.py
+index b0c5767..b8957bd 100644
+--- a/src/prisma/cli/prisma.py
++++ b/src/prisma/cli/prisma.py
+@@ -33,10 +33,6 @@ def run(
+     else:
+         env = default_env
+ 
+-    # ensure the client uses our engine binaries
+-    for engine in binaries.ENGINES:
+-        env[engine.env] = str(engine.path.absolute())
+-
+     process = subprocess.run(
+         [str(path.absolute()), *args],
+         env=env,
+@@ -79,6 +75,7 @@ def invoke() -> None:
+                     manifest=jsonrpc.Manifest(
+                         defaultOutput=str(generator.BASE_PACKAGE_DIR.absolute()),
+                         prettyName='Prisma Client Python',
++                        requiresEngines=['queryEngine'],
+                     )
+                 ),
+             )
+-- 
+2.30.1 (Apple Git-130)
+
